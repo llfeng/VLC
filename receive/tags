@@ -1,0 +1,60 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ACTIVE	tag.h	/^	ACTIVE,$/;"	e	enum:__anon4
+BEACON_RSP_TYPE	main.c	/^	BEACON_RSP_TYPE,$/;"	e	enum:__anon1	file:
+BEACON_TYPE	main.c	/^	BEACON_TYPE = 0,$/;"	e	enum:__anon1	file:
+DHCP	tag.h	/^	DHCP,$/;"	e	enum:__anon4
+DHCP_TYPE	main.c	/^	DHCP_TYPE$/;"	e	enum:__anon1	file:
+HDR_LEN	main.c	82;"	d	file:
+HOST	main.c	138;"	d	file:
+LISTEN	tag.h	/^	LISTEN$/;"	e	enum:__anon4
+MAXLINE	main.c	251;"	d	file:
+MTU	main.c	173;"	d	file:
+N	main.c	/^int N = 10;$/;"	v
+PEER_PORT	main.c	135;"	d	file:
+REQ_RSP_TYPE	main.c	/^	REQ_RSP_TYPE,$/;"	e	enum:__anon1	file:
+REQ_TYPE	main.c	/^	REQ_TYPE,$/;"	e	enum:__anon1	file:
+RET_COLLSION_TYPE	main.c	/^	RET_COLLSION_TYPE,$/;"	e	enum:__anon1	file:
+RET_TYPE	main.c	/^	RET_TYPE,$/;"	e	enum:__anon1	file:
+SERV_PORT	main.c	30;"	d	file:
+SESSION_LEN	main.c	174;"	d	file:
+SLEEP	tag.h	/^	SLEEP = 0,$/;"	e	enum:__anon4
+T	main.c	/^int T = 100;		\/\/unit is ms$/;"	v
+addr	main.c	/^	char addr;$/;"	m	struct:__anon2	file:
+addr	tag.h	/^	char addr;$/;"	m	struct:__anon3
+between_time	main.c	/^void between_time(struct timeval start, struct timeval end, struct timeval cmp_time){$/;"	f
+decode_frame	main.c	/^frame_t *decode_frame(char *frame_buf, int buf_len){$/;"	f
+down_speed	main.c	/^void down_speed(tag_t *vitag, struct sockaddr_in *peer_addr){$/;"	f
+frame_t	main.c	/^}frame_t;$/;"	t	typeref:struct:__anon2	file:
+frame_type_t	main.c	/^} frame_type_t;$/;"	t	typeref:enum:__anon1	file:
+gen_frame	main.c	/^int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_session, char addr, char payload_len,  char *payload){$/;"	f
+handle_frame	main.c	/^int handle_frame(tag_t *vitag, frame_t *frame, struct sockaddr_in *peer_addr){$/;"	f
+hash_interval	main.c	/^void hash_interval(tag_t *vitag, struct sockaddr_in *peer_addr){$/;"	f
+is_active	main.c	/^int is_active(){$/;"	f
+listen_reader	main.c	/^void *listen_reader(void *para){$/;"	f
+main	main.c	/^int main(){$/;"	f
+more_frag	main.c	/^	char more_frag;$/;"	m	struct:__anon2	file:
+more_session	main.c	/^	char more_session;$/;"	m	struct:__anon2	file:
+next_req_time	tag.h	/^	struct timeval next_req_time;$/;"	m	struct:__anon3	typeref:struct:__anon3::timeval
+parse_req	main.c	/^void parse_req(tag_t *vitag, frame_t *frame){$/;"	f
+payload	main.c	/^	char *payload;$/;"	m	struct:__anon2	file:
+payload_len	main.c	/^	char payload_len;$/;"	m	struct:__anon2	file:
+receive	main.c	/^void receive(tag_t *vitag){$/;"	f
+send_beacon_rsp	main.c	/^void send_beacon_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){$/;"	f
+send_req_rsp	main.c	/^void send_req_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){$/;"	f
+sockfd	tag.h	/^	int sockfd;$/;"	m	struct:__anon3
+sockfd_array	main.c	/^int sockfd_array[8]; $/;"	v
+start_udp_server	main.c	/^int start_udp_server(){$/;"	f
+start_work_thread	main.c	/^int start_work_thread(){$/;"	f
+status	tag.h	/^	char status;$/;"	m	struct:__anon3
+tag_status	main.c	/^int tag_status = SLEEP;$/;"	v
+tag_status_t	tag.h	/^}tag_status_t;$/;"	t	typeref:enum:__anon4
+tag_t	tag.h	/^}tag_t;$/;"	t	typeref:struct:__anon3
+timeslot_vaild	main.c	/^int timeslot_vaild(tag_t *vitag, int app_tick){$/;"	f
+type	main.c	/^	char type;$/;"	m	struct:__anon2	file:
+update_interval	main.c	/^void update_interval(int *interval, int slave_count, int period){$/;"	f
+update_ip	main.c	/^void update_ip(tag_t *vitag, frame_t *frame){$/;"	f

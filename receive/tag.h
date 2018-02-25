@@ -3,7 +3,7 @@ typedef struct{
 	char status;
 	char addr;
 	int sockfd;
-	struct timeval next_req_time;
+	int next_req_time;
 }tag_t;
 
 

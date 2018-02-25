@@ -14,7 +14,11 @@
 #include "tag.h"
 
 
+#define INTERVAL 120
+
+
 int tag_status = SLEEP;
+
 
 int N = 10;
 int T = 100;		//unit is ms
@@ -102,7 +106,7 @@ int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_sess
 	}
 }
 
-frame_t *decode_frame(char *frame_buf, int buf_len){
+frame_t *decode_frame(char *frame_buf, int buf_len, tag_t *vitag){
 	int index = 0;
 	int i = 0;
 	char sum = 0;
@@ -122,10 +126,11 @@ frame_t *decode_frame(char *frame_buf, int buf_len){
 		frame->payload = (char *)malloc(frame->payload_len);
 		memcpy(frame->payload, &frame_buf[2], frame->payload_len);
 
-#if 0
-		printf("frame->payload:%s\n", frame->payload);
-		printf("type:%d more_flag:%d more_session:%d addr:%d payload_len:%d\n", frame->type,frame->more_frag, frame->more_session, frame->addr,frame->payload_len);
-		printf("decode success\n");
+#if 1
+//		printf("frame->payload:%s\n", frame->payload);
+		printf("sock[%d]--2--type:%d more_flag:%d more_session:%d addr:%d payload_len:%d\n", vitag->sockfd, frame->type,frame->more_frag, frame->more_session, frame->addr,frame->payload_len);
+//		printf("decode success\n");
+       
 #endif
 	}
 	return frame;
@@ -180,8 +185,8 @@ void send_beacon_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){
 	int buf_len = gen_frame(frame_buf, BEACON_RSP_TYPE, 0, 0, vitag->addr, 1,  payload);
 	int n = sendto(vitag->sockfd, frame_buf, buf_len, 0, (struct sockaddr*)peer_addr, sizeof(struct sockaddr));
 	vitag->status = DHCP;
-	printf("[%s]---send beacon rsp\n", __func__);
-	printf("send n=%d\n", n);
+	printf("sock[%d]---send beacon rsp\n", vitag->sockfd);
+//	printf("send n=%d\n", n);
 }
 
 
@@ -193,7 +198,7 @@ void parse_req(tag_t *vitag, frame_t *frame){
 void send_req_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){
 	char frame_buf[64] = {0};
 	char payload[4] = {0xAA, 0xBB, 0xCC, 0xDD};
-	printf("[%s]---send req rsp\n", __func__);
+	printf("sock[%d]---send req rsp\n", vitag->sockfd);
 	int buf_len = gen_frame(frame_buf, BEACON_RSP_TYPE, 0, 0, vitag->addr, sizeof(payload),  payload);
 	sendto(vitag->sockfd, frame_buf, buf_len, 0, (struct sockaddr*)peer_addr, sizeof(struct sockaddr));
 }
@@ -207,7 +212,7 @@ void hash_interval(tag_t *vitag, struct sockaddr_in *peer_addr){
 
 void update_ip(tag_t *vitag, frame_t *frame){
 	vitag->status = LISTEN;
-	memcpy(&vitag->next_req_time, frame->payload, sizeof(struct timeval));
+    vitag->next_req_time = frame->payload[1] + time(NULL);
 	vitag->addr = frame->addr;
 }
 
@@ -220,10 +225,12 @@ int handle_frame(tag_t *vitag, frame_t *frame, struct sockaddr_in *peer_addr){
 	if(frame){
 		switch(frame->type){
 			case BEACON_TYPE:
-				send_beacon_rsp(vitag, peer_addr);
+                if(vitag->status == ACTIVE){
+                    send_beacon_rsp(vitag, peer_addr);
+                }
 				break;
 			case REQ_TYPE:
-				if(vitag->addr == frame->addr){
+				if(vitag->status == LISTEN && vitag->addr == frame->addr){
 					parse_req(vitag, frame);
 					send_req_rsp(vitag, peer_addr);
 				}
@@ -236,7 +243,9 @@ int handle_frame(tag_t *vitag, frame_t *frame, struct sockaddr_in *peer_addr){
 				hash_interval(vitag, peer_addr);
 				break;
 			case DHCP_TYPE:
-				update_ip(vitag, frame);
+                if(vitag->status == DHCP){
+                    update_ip(vitag, frame);
+                }
 				break;
 			default:
 				break;
@@ -258,8 +267,8 @@ void receive(tag_t *vitag){
 	memset(&recv_time, 0, sizeof(struct timeval));
 	if(n>0){
 		gettimeofday( &recv_time, NULL );
-		frame_t *frame = decode_frame(buf, n);
-//		printf("i am sock %d reveive len=%d timestamp:%ld.%d\n", sockfd, n, recv_time.tv_sec, recv_time.tv_usec);
+		frame_t *frame = decode_frame(buf, n, vitag);
+		printf("sock[%d]--1---reveive len=%d timestamp:%ld.%ld\n", vitag->sockfd, n, recv_time.tv_sec, recv_time.tv_usec);
 		handle_frame(vitag,frame, &peer_addr);
 #if 0
 		free(frame->payload);
@@ -270,70 +279,52 @@ void receive(tag_t *vitag){
 	}
 }	
 
-void between_time(struct timeval start, struct timeval end, struct timeval cmp_time){
-	if(start.tv_sec > end.tv_sec){
-		return -1;
-	}else if(start.tv_sec == end.tv_sec){
-		if(start.tv_usec > end.tv_usec){
-			return -1;
-		}
-	}
-
-	if(start.tv_sec != end.tv_sec){
-		if(start.tv_sec < cmp_time.tv_sec && cmp_time.tv_sec < end.tv_sec){
-			return 1;
-		}else{
-			return 0;
-		}
-	}else if(cmp_time.tv_sec == start.tv_sec){
-		if(cmp_time.tv_usec >start.tv_usec){
-			
-		}
-		return 0;
-	}
-}	
 
 int timeslot_vaild(tag_t *vitag, int app_tick){
+    int ret = 0;
 	if(vitag->status == LISTEN){
-		if(time(NULL) == vitag->next_req_time){
+		if((app_tick - vitag->next_req_time) / INTERVAL == 0){          
 			ret = 1;
-		}
-		if(time(NULL) - vitag->next_req_time > 15){
+		}else{
 			vitag->status = ACTIVE;
 			ret = 0;
 		}
-	}else if(vitag->status == ACTIVE){
+	}else if(vitag->status == ACTIVE || vitag->status == DHCP){
 		if((time(NULL) - app_tick)%120/15 == 0){
 			ret = 1;
 		}else{
 			ret = 0;
 		}
 	}
+    return ret;
 }
 
 void *listen_reader(void *para){
 	tag_t *vitag = (tag_t *)malloc(sizeof(tag_t));
-	memmset(vitag, 0, sizeof(tag_t));
+	memset(vitag, 0, sizeof(tag_t));
 	vitag->sockfd = *((int *)para);
 	vitag->status = SLEEP;
 	struct timeval seed_time;
 	memset(&seed_time, 0, sizeof(struct timeval));
 	gettimeofday( &seed_time, NULL );
 	srand(seed_time.tv_usec);
-	start_time = rand()%120;
+	int start_time = rand()%120;
+    printf("sockfd:%d i will sleep %ds\n", vitag->sockfd, start_time);
 	sleep(start_time);
+    printf("sockfd:%d i have awake\n", vitag->sockfd);
 	vitag->status = ACTIVE;
-	int app_tick = time(NULL);
+	int app_tick;
 	while(1){
 		struct timeval tv;
 		fd_set readfds;
 		int i=0;
 		unsigned int n=0;
-		if(timeslot_vaild()){
+        app_tick = time(NULL);
+		if(timeslot_vaild(vitag, app_tick)){
 			FD_ZERO(&readfds);
 			FD_SET(vitag->sockfd,&readfds);
-			tv.tv_sec=INTERVAL;
-			tv.tv_usec=0;
+			tv.tv_sec=0;
+			tv.tv_usec=100000;
 			select(vitag->sockfd+1,&readfds,NULL,NULL,&tv);
 			if(FD_ISSET(vitag->sockfd,&readfds)){
 				receive(vitag);

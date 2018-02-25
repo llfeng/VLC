@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <time.h>
 
 typedef struct{
 	char vaild;
@@ -125,7 +126,7 @@ void send_req(char addr, char *data, char data_len){
 //	char *buf = "i am xmit";
 
 	char frame_buf[64] = {0};
-	int buf_len = gen_frame(frame_buf, REQ_TYPE, 0 , 0, -1,  data_len,  data);
+	int buf_len = gen_frame(frame_buf, REQ_TYPE, 0 , 0, 0,  data_len,  data);
 	for(i = 0; i < 8; i++){
 		int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
 		printf("send[%d] ret=%d\n", i, ret);
@@ -144,7 +145,7 @@ void send_beacon(){
 	}
 	char *buf = "i am beacon";
 	char frame_buf[64] = {0};
-	int buf_len = gen_frame(frame_buf, BEACON_TYPE, 0 , 0, -1,  strlen(buf),  buf);
+	int buf_len = gen_frame(frame_buf, BEACON_TYPE, 0 , 0, 0,  strlen(buf),  buf);
 	for(i = 0; i < 8; i++){
 		int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
 		printf("send[%d] ret=%d\n", i, ret);
@@ -212,11 +213,9 @@ char find_vaild_ip(){
 }
 
 
-int check_timeslot_vaild(struct timeval recv_time){
+int check_timeslot_vaild(int recv_time){
 	int ret = 0;
-	if(recv_time.tv_sec%INTERVAL < INTERVAL-1){
-		ret = 1;
-	}else if(1000000 - recv_time.tv_usec > 200000){
+	if(INTERVAL - (recv_time%INTERVAL) > 2){
 		ret = 1;
 	}else{
 		ret = 0;
@@ -224,12 +223,16 @@ int check_timeslot_vaild(struct timeval recv_time){
 	return ret;
 }
 
+void cal_next_req_time(struct timeval cur_time, char addr){
+    struct timeval start_time;
+    memset(&start_time, 0, sizeof(struct timeval));
+
+}
+
 
 void send_dhcp(){
 	printf("%s\n", __func__);
-	struct timeval recv_time;
-	memset(&recv_time, 0, sizeof(struct timeval));
-	gettimeofday( &recv_time, NULL );
+    int recv_time = time(NULL);
 	if(check_timeslot_vaild(recv_time)){
 		char frame_buf[64] = {0};
 		char data[32] = {0};
@@ -245,9 +248,10 @@ void send_dhcp(){
 				inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
 				peer_addr_array[i].sin_port = htons(PEER_PORT+i);
 			}
-			data[0] = addr;
+            char next_req_time = cal_next_time(addr);
+			data[0] = next_req_time;
 			int data_len = 1;
-			buf_len = gen_frame(frame_buf, DHCP_TYPE, 0 , 0, -1, data_len,  data);
+			buf_len = gen_frame(frame_buf, DHCP_TYPE, 0 , 0, addr, data_len,  data);
 			for(i = 0; i < 8; i++){
 				int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
 				printf("send[%d] ret=%d\n", i, ret);
@@ -335,12 +339,15 @@ int main(){
 	}
 	init_addr_table();
 	while(1){
-		struct timeval recv_time;
-		memset(&recv_time, 0, sizeof(struct timeval));
-		gettimeofday( &recv_time, NULL );
-		if(check_timeslot_vaild(recv_time)){
+        int cur_time = time(NULL);
+		if(check_timeslot_vaild(cur_time)){
 			if(tag_count){
-				int index = recv_time.tv_sec%120/INTERVAL;
+				int index = cur_time%120/INTERVAL;
+                if(index != 0){
+                    addr_table[index-1].rsp_flag = 0;
+                }else{
+                    addr_table[7].rsp_flag = 0;
+                }
 				if(addr_table[index].vaild && addr_table[index].rsp_flag == 0){
 					char *data = "i am req";
 					int data_len = strlen(data);

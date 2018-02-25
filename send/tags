@@ -1,0 +1,55 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BEACON_RSP_TYPE	main.c	/^	BEACON_RSP_TYPE,$/;"	e	enum:__anon2	file:
+BEACON_TYPE	main.c	/^	BEACON_TYPE = 0,$/;"	e	enum:__anon2	file:
+DHCP_TYPE	main.c	/^	DHCP_TYPE$/;"	e	enum:__anon2	file:
+HDR_LEN	main.c	89;"	d	file:
+HOST	main.c	113;"	d	file:
+INTERVAL	main.c	28;"	d	file:
+MAXLINE	main.c	279;"	d	file:
+MAX_COUNT	main.c	27;"	d	file:
+MTU	main.c	155;"	d	file:
+N	main.c	/^int N = 10;$/;"	v
+PEER_PORT	main.c	112;"	d	file:
+PERIOD	main.c	29;"	d	file:
+REQ_RSP_TYPE	main.c	/^	REQ_RSP_TYPE,$/;"	e	enum:__anon2	file:
+REQ_TYPE	main.c	/^	REQ_TYPE,$/;"	e	enum:__anon2	file:
+RET_COLLSION_TYPE	main.c	/^	RET_COLLSION_TYPE,$/;"	e	enum:__anon2	file:
+RET_TYPE	main.c	/^	RET_TYPE,$/;"	e	enum:__anon2	file:
+SERV_PORT	main.c	39;"	d	file:
+SESSION_LEN	main.c	156;"	d	file:
+T	main.c	/^int T = 100;		\/\/unit is ms$/;"	v
+addr	main.c	/^	char addr;$/;"	m	struct:__anon1	file:
+addr	main.c	/^    char addr;$/;"	m	struct:__anon3	file:
+addr_t	main.c	/^}addr_t;$/;"	t	typeref:struct:__anon1	file:
+addr_table	main.c	/^addr_t addr_table[8];$/;"	v
+check_beacon_rsp	main.c	/^int check_beacon_rsp(char *payload, int len){$/;"	f
+check_timeslot_vaild	main.c	/^int check_timeslot_vaild(struct timeval recv_time){$/;"	f
+check_timesolt_vaild	main.c	/^int check_timesolt_vaild(){$/;"	f
+decode_frame	main.c	/^frame_t *decode_frame(char *frame_buf, int buf_len){$/;"	f
+find_vaild_ip	main.c	/^char find_vaild_ip(){$/;"	f
+frame_t	main.c	/^}frame_t;$/;"	t	typeref:struct:__anon3	file:
+frame_type_t	main.c	/^} frame_type_t;$/;"	t	typeref:enum:__anon2	file:
+gen_frame	main.c	/^int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_session, char addr,  char payload_len,  char *payload){$/;"	f
+handle_frame	main.c	/^void handle_frame(frame_t *frame){$/;"	f
+init_addr_table	main.c	/^void init_addr_table(){$/;"	f
+main	main.c	/^int main(){$/;"	f
+more_frag	main.c	/^    char more_frag;$/;"	m	struct:__anon3	file:
+more_session	main.c	/^    char more_session;$/;"	m	struct:__anon3	file:
+payload	main.c	/^    char *payload;$/;"	m	struct:__anon3	file:
+payload_len	main.c	/^    char payload_len;$/;"	m	struct:__anon3	file:
+receive	main.c	/^void receive(){$/;"	f
+rsp_flag	main.c	/^	char rsp_flag;$/;"	m	struct:__anon1	file:
+send_beacon	main.c	/^void send_beacon(){$/;"	f
+send_dhcp	main.c	/^void send_dhcp(){$/;"	f
+send_req	main.c	/^void send_req(char addr, char *data, char data_len){$/;"	f
+sockfd	main.c	/^int sockfd; $/;"	v
+start_udp_server	main.c	/^int start_udp_server(){$/;"	f
+tag_count	main.c	/^int tag_count = 0;$/;"	v
+type	main.c	/^    char type;$/;"	m	struct:__anon3	file:
+update_interval	main.c	/^void update_interval(int *interval, int slave_count, int period){$/;"	f
+vaild	main.c	/^	char vaild;$/;"	m	struct:__anon1	file:
