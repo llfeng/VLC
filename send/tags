@@ -6,50 +6,76 @@
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
 BEACON_RSP_TYPE	main.c	/^	BEACON_RSP_TYPE,$/;"	e	enum:__anon2	file:
 BEACON_TYPE	main.c	/^	BEACON_TYPE = 0,$/;"	e	enum:__anon2	file:
+DEFAULT_EVENT	scheduler.c	11;"	d	file:
 DHCP_TYPE	main.c	/^	DHCP_TYPE$/;"	e	enum:__anon2	file:
-HDR_LEN	main.c	89;"	d	file:
-HOST	main.c	113;"	d	file:
-INTERVAL	main.c	28;"	d	file:
-MAXLINE	main.c	279;"	d	file:
-MAX_COUNT	main.c	27;"	d	file:
-MTU	main.c	155;"	d	file:
+HDR_LEN	main.c	123;"	d	file:
+HOST	main.c	150;"	d	file:
+INTERVAL	main.c	34;"	d	file:
+MAXLINE	main.c	361;"	d	file:
+MAX_COUNT	main.c	33;"	d	file:
+MTU	main.c	199;"	d	file:
 N	main.c	/^int N = 10;$/;"	v
-PEER_PORT	main.c	112;"	d	file:
-PERIOD	main.c	29;"	d	file:
+PEER_PORT	main.c	149;"	d	file:
+PERIOD	main.c	35;"	d	file:
 REQ_RSP_TYPE	main.c	/^	REQ_RSP_TYPE,$/;"	e	enum:__anon2	file:
 REQ_TYPE	main.c	/^	REQ_TYPE,$/;"	e	enum:__anon2	file:
 RET_COLLSION_TYPE	main.c	/^	RET_COLLSION_TYPE,$/;"	e	enum:__anon2	file:
 RET_TYPE	main.c	/^	RET_TYPE,$/;"	e	enum:__anon2	file:
-SERV_PORT	main.c	39;"	d	file:
-SESSION_LEN	main.c	156;"	d	file:
+SCH_EVENT_MAX_COUNT	scheduler.h	6;"	d
+SERV_PORT	main.c	45;"	d	file:
+SESSION_LEN	main.c	200;"	d	file:
 T	main.c	/^int T = 100;		\/\/unit is ms$/;"	v
+_SCHEDULE_H	scheduler.h	2;"	d
 addr	main.c	/^	char addr;$/;"	m	struct:__anon1	file:
 addr	main.c	/^    char addr;$/;"	m	struct:__anon3	file:
 addr_t	main.c	/^}addr_t;$/;"	t	typeref:struct:__anon1	file:
 addr_table	main.c	/^addr_t addr_table[8];$/;"	v
+app_tick	scheduler.c	/^uint32_t app_tick = 0;$/;"	v
+arg	scheduler.h	/^	void *arg;$/;"	m	struct:__anon4
+cal_next_req_time	main.c	/^void cal_next_req_time(struct timeval cur_time, char addr){$/;"	f
+cal_remain_tick	main.c	/^int cal_remain_tick(char addr){$/;"	f
 check_beacon_rsp	main.c	/^int check_beacon_rsp(char *payload, int len){$/;"	f
-check_timeslot_vaild	main.c	/^int check_timeslot_vaild(struct timeval recv_time){$/;"	f
+check_timeslot_vaild	main.c	/^int check_timeslot_vaild(int recv_time){$/;"	f
 check_timesolt_vaild	main.c	/^int check_timesolt_vaild(){$/;"	f
+cur_event_count	scheduler.h	/^	uint8_t cur_event_count;$/;"	m	struct:__anon5
 decode_frame	main.c	/^frame_t *decode_frame(char *frame_buf, int buf_len){$/;"	f
 find_vaild_ip	main.c	/^char find_vaild_ip(){$/;"	f
 frame_t	main.c	/^}frame_t;$/;"	t	typeref:struct:__anon3	file:
 frame_type_t	main.c	/^} frame_type_t;$/;"	t	typeref:enum:__anon2	file:
-gen_frame	main.c	/^int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_session, char addr,  char payload_len,  char *payload){$/;"	f
+gen_frame	main.c	/^int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_session, char addr, char next_req_time, char payload_len,  char *payload){$/;"	f
+handle	scheduler.h	/^	void (*handle)(void *arg);$/;"	m	struct:__anon4
 handle_frame	main.c	/^void handle_frame(frame_t *frame){$/;"	f
+initSchEvent	scheduler.c	/^void initSchEvent(sch_event_t *event, uint8_t *name, uint8_t repeat, uint32_t period, uint32_t remain, schEventHandle handle , void *arg){$/;"	f
+initScheduler	scheduler.c	/^void initScheduler(scheduler_t *scheduler){$/;"	f
 init_addr_table	main.c	/^void init_addr_table(){$/;"	f
 main	main.c	/^int main(){$/;"	f
 more_frag	main.c	/^    char more_frag;$/;"	m	struct:__anon3	file:
 more_session	main.c	/^    char more_session;$/;"	m	struct:__anon3	file:
+name	scheduler.h	/^	uint8_t name[16];$/;"	m	struct:__anon4
 payload	main.c	/^    char *payload;$/;"	m	struct:__anon3	file:
 payload_len	main.c	/^    char payload_len;$/;"	m	struct:__anon3	file:
+period	scheduler.h	/^	uint32_t period;$/;"	m	struct:__anon4
 receive	main.c	/^void receive(){$/;"	f
+regSchDefEvent	scheduler.c	/^void regSchDefEvent(scheduler_t *scheduler, sch_event_t *sch_event){$/;"	f
+regSchEvent	scheduler.c	/^void regSchEvent(scheduler_t *scheduler, sch_event_t *sch_event){$/;"	f
+remain	scheduler.h	/^	uint32_t remain;$/;"	m	struct:__anon4
+repeat	scheduler.h	/^	uint8_t repeat;$/;"	m	struct:__anon4
 rsp_flag	main.c	/^	char rsp_flag;$/;"	m	struct:__anon1	file:
-send_beacon	main.c	/^void send_beacon(){$/;"	f
+run_scheduler	scheduler.c	/^void *run_scheduler(void *arg){$/;"	f
+schEventHandle	scheduler.h	/^typedef void (*schEventHandle)(void *arg);$/;"	t
+sch_event	scheduler.h	/^	sch_event_t *sch_event[SCH_EVENT_MAX_COUNT+1];$/;"	m	struct:__anon5
+sch_event_t	scheduler.h	/^}sch_event_t;$/;"	t	typeref:struct:__anon4
+scheduler	main.c	/^scheduler_t *scheduler = NULL;$/;"	v
+scheduler_t	scheduler.h	/^}scheduler_t;$/;"	t	typeref:struct:__anon5
+send_beacon	main.c	/^void send_beacon(void *para){$/;"	f
 send_dhcp	main.c	/^void send_dhcp(){$/;"	f
 send_req	main.c	/^void send_req(char addr, char *data, char data_len){$/;"	f
+send_req_handle	main.c	/^void send_req_handle(void *para){$/;"	f
 sockfd	main.c	/^int sockfd; $/;"	v
+startScheduler	scheduler.c	/^void startScheduler(scheduler_t *scheduler){$/;"	f
 start_udp_server	main.c	/^int start_udp_server(){$/;"	f
 tag_count	main.c	/^int tag_count = 0;$/;"	v
 type	main.c	/^    char type;$/;"	m	struct:__anon3	file:
+unregSchEvent	scheduler.c	/^void unregSchEvent(scheduler_t *scheduler, uint8_t *name){$/;"	f
 update_interval	main.c	/^void update_interval(int *interval, int slave_count, int period){$/;"	f
 vaild	main.c	/^	char vaild;$/;"	m	struct:__anon1	file:

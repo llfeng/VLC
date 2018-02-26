@@ -10,26 +10,31 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <time.h>
+#include "scheduler.h"
 
 typedef struct{
-	char vaild;
-	char addr;
-	char rsp_flag;
+	uint8_t vaild;
+	uint8_t addr;
+	uint8_t rsp_flag;
 }addr_t;
 
 addr_t addr_table[8];
 
 
-int tag_count = 0;
 
-int N = 10;
-int T = 100;		//unit is ms
+scheduler_t *scheduler = NULL;
+
+
+uint32_t tag_count = 0;
+
+uint32_t N = 10;
+uint32_t T = 100;		//unit is ms
 
 #define MAX_COUNT	8
 #define INTERVAL	15		//unit is sec
 #define PERIOD		120		//unit is sec
 
-void update_interval(int *interval, int slave_count, int period){
+void update_interval(uint32_t *interval, uint32_t slave_count, uint32_t period){
 	if(slave_count){
 		*interval = period/slave_count;
 	}else{
@@ -39,8 +44,8 @@ void update_interval(int *interval, int slave_count, int period){
 
 #define SERV_PORT	8888
 
-int sockfd; 
-int start_udp_server(){
+uint32_t sockfd; 
+uint32_t start_udp_server(){
 	struct sockaddr_in servaddr, cliaddr; 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
 	bzero(&servaddr, sizeof(servaddr)); 
@@ -67,13 +72,41 @@ typedef enum{
 
 
 typedef struct{
-    char type;
-    char more_frag;
-    char more_session;
-    char addr;
-    char payload_len;
-    char *payload;
+    uint8_t type;
+    uint8_t more_frag;
+    uint8_t more_session;
+    uint8_t addr;
+    uint8_t payload_len;
+    uint8_t *payload;
 }frame_t;
+
+
+
+
+//|---------PERIOD-----------|
+//|-INTERVAL-|
+//|-IFS-|
+uint32_t cal_remain_tick(uint8_t addr){
+    uint32_t remain_tick = 0;   
+    uint32_t cur_period = app_tick/PERIOD;
+    uint32_t next_period = cur_period + 1;
+    
+    uint32_t next_interval = addr;
+    uint32_t cur_interval = app_tick%PERIOD/INTERVAL;
+
+    uint32_t cur_ifs = app_tick%INTERVAL;
+
+
+    if(next_interval <= cur_interval){
+        uint32_t next_tick = (next_period*PERIOD) + (next_interval*INTERVAL);
+        remain_tick = next_tick - app_tick;
+    }else{
+        uint32_t next_tick = cur_period*PERIOD + next_interval*INTERVAL;
+        remain_tick = next_tick - app_tick;
+    }   
+    return remain_tick;
+}
+
 
 
 
@@ -81,25 +114,28 @@ typedef struct{
 
 低速率限制协议的复杂度，也限制了网络的规模。
 
-| type(3bit) | more fragment(1bit) | more session(1bit) | addr(3bit) | payload length(8bit) | payload | FCS(8bit) |
+| type(3bit) | more fragment(1bit) | more session(1bit) | addr(3bit) | next req time(8bit) | payload length(8bit) | payload | FCS(8bit) |
 
 ************************/
 
 
-int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_session, char addr,  char payload_len,  char *payload){
+int32_t gen_frame(uint8_t *frame_buf, frame_type_t type, uint8_t more_frag, uint8_t more_session, uint8_t addr, uint8_t next_req_time, uint8_t payload_len,  uint8_t *payload){
 #define HDR_LEN	3
 	if(frame_buf){
-		char sign = (type<<5);
+		uint8_t sign = (type<<5);
 		sign |= (more_frag<<4);
 		sign |= (more_session<<3);
 		sign |= addr;
-		int index = 0;
+		uint32_t index = 0;
 		frame_buf[index++] = sign;
+        frame_buf[index++] = next_req_time;
 		frame_buf[index++] = payload_len;
-		memcpy(&frame_buf[index], payload, payload_len);
-		index += payload_len;
-		int i = 0;
-		char sum = 0;
+        if(payload_len){
+            memcpy(&frame_buf[index], payload, payload_len);
+            index += payload_len;
+        }
+		uint32_t i = 0;
+		uint8_t sum = 0;
 		for(i = 0; i < index; i++){
 			sum += frame_buf[i];
 		}
@@ -110,56 +146,11 @@ int gen_frame(char *frame_buf, frame_type_t type, char more_frag, char more_sess
 	}
 }
 
-#define PEER_PORT	1234
-#define HOST "127.0.0.1"
 
-void send_req(char addr, char *data, char data_len){
-	char *host = HOST;
-	struct sockaddr_in peer_addr_array[8];
-	memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
-	int i = 0;
-	for(i = 0; i < 8; i++){
-		peer_addr_array[i].sin_family = AF_INET;
-		inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
-		peer_addr_array[i].sin_port = htons(PEER_PORT+i);
-	}
-//	char *buf = "i am xmit";
-
-	char frame_buf[64] = {0};
-	int buf_len = gen_frame(frame_buf, REQ_TYPE, 0 , 0, 0,  data_len,  data);
-	for(i = 0; i < 8; i++){
-		int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
-		printf("send[%d] ret=%d\n", i, ret);
-	}
-}
-
-void send_beacon(){
-	char *host = HOST;
-	struct sockaddr_in peer_addr_array[8];
-	memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
-	int i = 0;
-	for(i = 0; i < 8; i++){
-		peer_addr_array[i].sin_family = AF_INET;
-		inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
-		peer_addr_array[i].sin_port = htons(PEER_PORT+i);
-	}
-	char *buf = "i am beacon";
-	char frame_buf[64] = {0};
-	int buf_len = gen_frame(frame_buf, BEACON_TYPE, 0 , 0, 0,  strlen(buf),  buf);
-	for(i = 0; i < 8; i++){
-		int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
-		printf("send[%d] ret=%d\n", i, ret);
-	}
-}
-
-
-#define MTU	64
-#define SESSION_LEN	4	//unit is rtt
-
-frame_t *decode_frame(char *frame_buf, int buf_len){
-	int index = 0;
-    int i = 0;
-    char sum = 0;
+frame_t *decode_frame(uint8_t *frame_buf, uint32_t buf_len){
+	uint32_t index = 0;
+    uint32_t i = 0;
+    uint8_t sum = 0;
     frame_t *frame = NULL;
 
 	printf("frame buf: ");
@@ -175,9 +166,9 @@ frame_t *decode_frame(char *frame_buf, int buf_len){
         frame->more_frag = (frame_buf[0]&0x10)>>4;
         frame->more_session = (frame_buf[0]&0x08)>>3;
         frame->addr = (frame_buf[0]&0x07);
-        frame->payload_len = frame_buf[1];
-        frame->payload = (char *)malloc(frame->payload_len);
-        memcpy(frame->payload, &frame_buf[2], frame->payload_len);
+        frame->payload_len = frame_buf[2];
+        frame->payload = (uint8_t *)malloc(frame->payload_len);
+        memcpy(frame->payload, &frame_buf[3], frame->payload_len);
         printf("type:%d more_flag:%d more_session:%d addr:%d payload_len:%d\n", frame->type,frame->more_frag, frame->more_session, frame->addr,frame->payload_len);
 
         printf("decode success\n");
@@ -185,8 +176,71 @@ frame_t *decode_frame(char *frame_buf, int buf_len){
     return frame;
 }
 
-int check_beacon_rsp(char *payload, int len){
-	char beacon_rsp_data[] = {0XAA};
+
+
+#define PEER_PORT	1234
+#define HOST "127.0.0.1"
+
+void send_req(uint8_t addr, uint8_t *data, uint8_t data_len){
+	uint8_t *host = HOST;
+	struct sockaddr_in peer_addr_array[8];
+	memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
+	uint32_t i = 0;
+	for(i = 0; i < 8; i++){
+		peer_addr_array[i].sin_family = AF_INET;
+		inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
+		peer_addr_array[i].sin_port = htons(PEER_PORT+i);
+	}
+
+	uint32_t remain_tick = cal_remain_tick(addr);
+
+	uint8_t remain_tick_format = remain_tick/INTERVAL;
+	remain_tick_format <<= 5;
+	remain_tick_format |= remain_tick%INTERVAL;   
+
+
+	uint8_t frame_buf[64] = {0};
+	uint32_t buf_len = gen_frame(frame_buf, REQ_TYPE, 0 , 0, addr, remain_tick_format,  data_len,  data);
+	for(i = 0; i < 8; i++){
+		uint32_t ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
+        frame_t *frame = decode_frame(frame_buf, ret);
+        if(frame){
+            if(frame->payload){
+                free(frame->payload);
+                frame->payload = NULL;
+            }
+            free(frame);
+            frame = NULL;
+        }
+		printf("send[%d] ret=%d\n", i, ret);
+	}
+}
+
+void send_beacon(void *para){
+    printf("enter %s\n", __func__);
+	uint8_t *host = HOST;
+	struct sockaddr_in peer_addr_array[8];
+	memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
+	uint32_t i = 0;
+	for(i = 0; i < 8; i++){
+		peer_addr_array[i].sin_family = AF_INET;
+		inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
+		peer_addr_array[i].sin_port = htons(PEER_PORT+i);
+	}
+	uint8_t *buf = "i am beacon";
+	uint8_t frame_buf[64] = {0};
+	uint32_t buf_len = gen_frame(frame_buf, BEACON_TYPE, 0 , 0, 0, 0, strlen(buf),  buf);
+	for(i = 0; i < 8; i++){
+		uint32_t ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
+		printf("send[%d] ret=%d\n", i, ret);
+	}
+}
+
+
+
+
+uint32_t check_beacon_rsp(uint8_t *payload, uint32_t len){
+	uint8_t beacon_rsp_data[] = {0XAA};
 	if(memcmp(beacon_rsp_data, payload, len) == 0){
 		return 1;
 	}else{
@@ -194,7 +248,7 @@ int check_beacon_rsp(char *payload, int len){
 	}
 }
 
-int check_timesolt_vaild(){
+uint32_t check_timesolt_vaild(){
 	if(time(NULL)%10 < 9){
 		return 1;
 	}else{
@@ -202,19 +256,20 @@ int check_timesolt_vaild(){
 	}
 }
 
-char find_vaild_ip(){
-	int i = 0;
+uint8_t find_vaild_ip(){
+	uint32_t i = 0;
 	for(i = 0; i < 8; i++){
 		if(addr_table[i].vaild == 0){
+            printf("%s vaild ip:%d\n", __func__, i);
 			return i;
 		}
 	}
-	return -1;
+	return 0xff;
 }
 
 
-int check_timeslot_vaild(int recv_time){
-	int ret = 0;
+uint32_t check_timeslot_vaild(uint32_t recv_time){
+	uint32_t ret = 0;
 	if(INTERVAL - (recv_time%INTERVAL) > 2){
 		ret = 1;
 	}else{
@@ -223,56 +278,106 @@ int check_timeslot_vaild(int recv_time){
 	return ret;
 }
 
-void cal_next_req_time(struct timeval cur_time, char addr){
+
+
+void cal_next_req_time(struct timeval cur_time, uint8_t addr){
     struct timeval start_time;
     memset(&start_time, 0, sizeof(struct timeval));
 
 }
 
 
-void send_dhcp(){
-	printf("%s\n", __func__);
-    int recv_time = time(NULL);
-	if(check_timeslot_vaild(recv_time)){
-		char frame_buf[64] = {0};
-		char data[32] = {0};
-		char addr = find_vaild_ip();
-		int buf_len = 0;
-		if(addr >= 0){
-			char *host = HOST;
-			struct sockaddr_in peer_addr_array[8];
-			memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
-			int i = 0;
-			for(i = 0; i < 8; i++){
-				peer_addr_array[i].sin_family = AF_INET;
-				inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
-				peer_addr_array[i].sin_port = htons(PEER_PORT+i);
-			}
-            char next_req_time = cal_next_time(addr);
-			data[0] = next_req_time;
-			int data_len = 1;
-			buf_len = gen_frame(frame_buf, DHCP_TYPE, 0 , 0, addr, data_len,  data);
-			for(i = 0; i < 8; i++){
-				int ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
-				printf("send[%d] ret=%d\n", i, ret);
-			}
-			addr_table[addr].vaild = 1;
-			addr_table[addr].rsp_flag = 0;
-			tag_count++;
-		}
-	}
+void send_req_handle(void *para){
+    printf("enter %s\n", __func__);
+    if(!para){
+        return;
+    }
+    uint8_t addr = ((uint8_t *)para)[0];
+
+    printf("\n\n\nsend addr:%d\n\n\n", addr);
+    free(para);
+
+	if(addr_table[addr].rsp_flag == 1){
+        addr_table[addr].rsp_flag = 0;	
+        uint8_t *data = "i am req";
+        uint32_t data_len = strlen(data);
+        send_req(addr, data, data_len);
+   	}else{
+        addr_table[addr].vaild = 0;
+    }
+    printf("leave %s\n", __func__);
 }
+
+
+void send_dhcp(){
+    printf("%s\n", __func__);
+    uint8_t frame_buf[64] = {0};
+    uint8_t data[32] = {0};
+    static uint8_t addr =  0;
+    addr = find_vaild_ip();
+    uint32_t buf_len = 0;
+    if(addr < 8){
+        uint8_t *host = HOST;
+        struct sockaddr_in peer_addr_array[8];
+        memset(peer_addr_array, 0, sizeof(struct sockaddr_in));
+        uint32_t i = 0;
+        for(i = 0; i < 8; i++){
+            peer_addr_array[i].sin_family = AF_INET;
+            inet_pton(AF_INET, host, &peer_addr_array[i].sin_addr);
+            peer_addr_array[i].sin_port = htons(PEER_PORT+i);
+        }
+
+
+        sch_event_t *req_event = (sch_event_t *)malloc(sizeof(sch_event_t));
+        memset(req_event, 0, sizeof(sch_event_t));
+        uint8_t event_name[32] = {0};
+        sprintf(event_name, "req_%d", addr);
+     
+        uint32_t remain_tick = cal_remain_tick(addr);
+           
+        uint8_t remain_tick_format = remain_tick/INTERVAL;
+        remain_tick_format <<= 5;
+        remain_tick_format |= remain_tick%INTERVAL;        
+//        uint8_t next_req_time = cal_next_time(addr);
+//        data[0] = next_req_time;
+//        data[0] = remain_tick_format;
+        uint32_t data_len = 0;
+        buf_len = gen_frame(frame_buf, DHCP_TYPE, 0 , 0, addr, remain_tick_format, data_len,  NULL);
+        for(i = 0; i < 8; i++){
+            uint32_t ret = sendto(sockfd, frame_buf, buf_len, 0, (struct sockaddr*)&peer_addr_array[i], sizeof(struct sockaddr));
+            frame_t *frame = decode_frame(frame_buf, ret);
+            if(frame){
+                if(frame->payload){
+                    free(frame->payload);
+                    frame->payload = NULL;
+                }
+                free(frame);
+                frame = NULL;
+            }
+            printf("send[%d] ret=%d\n", i, ret);
+        }
+        addr_table[addr].vaild = 1;
+        addr_table[addr].rsp_flag = 1;
+
+        uint8_t *arg = (uint8_t *)malloc(1);
+        arg[0] = addr;
+
+        initSchEvent(req_event, event_name, 0, 0, remain_tick, send_req_handle, (void *)arg);
+        regSchEvent(scheduler, req_event);
+    }
+}
+
 void handle_frame(frame_t *frame){
-	switch(frame->type){
-		case BEACON_RSP_TYPE:
-			if(frame->payload){
-				if(check_beacon_rsp(frame->payload, frame->payload_len)){
-					send_dhcp();
-				}
-			}
-			break;
-		case REQ_RSP_TYPE:
-//			forward_to_app();
+    switch(frame->type){
+        case BEACON_RSP_TYPE:
+            if(frame->payload){
+                if(check_beacon_rsp(frame->payload, frame->payload_len)){
+                    send_dhcp();
+                }
+            }
+            break;
+        case REQ_RSP_TYPE:
+            //			forward_to_app();
 			break;
 		default:
 			break;
@@ -284,8 +389,8 @@ void receive(){
 	struct sockaddr_in peer_addr;
 	memset(&peer_addr, 0, sizeof(struct sockaddr_in));
 	socklen_t addrlen = sizeof(peer_addr);
-	char buf[MAXLINE] = {0};
-	int n = recvfrom(sockfd, buf, MAXLINE, 0, (struct sockaddr*)&peer_addr, &addrlen);	
+	uint8_t buf[MAXLINE] = {0};
+	uint32_t n = recvfrom(sockfd, buf, MAXLINE, 0, (struct sockaddr*)&peer_addr, &addrlen);	
 	printf("receive len:%d\n", n);
 	frame_t *frame = decode_frame(buf, n);
 	if(frame){
@@ -296,7 +401,7 @@ void receive(){
 #if 0
 void send_thread(){
 	while(1){
-		int app_tick = time(NULL);
+		uint32_t app_tick = time(NULL);
 		if(app_tick%10 < 9){
 			if(app_tick%10 == 0 && tag_count){
 				index = (app_tick%80)/10;
@@ -317,10 +422,10 @@ void send_thread(){
 #endif
 
 void init_addr_table(){
-	int i = 0;
+	uint32_t i = 0;
 	for(i = 0; i < 8; i++){
 		addr_table[i].vaild = 0;
-		addr_table[i].addr = -1;
+		addr_table[i].addr = 0xff;
 		addr_table[i].rsp_flag = 0;
 	}
 }
@@ -328,47 +433,35 @@ void init_addr_table(){
 
 
 
-int main(){
+int32_t main(){
 
-	int timer = 0;
-	int interval = INTERVAL;
-	int app_tick = T;
+	uint32_t timer = 0;
+	uint32_t interval = INTERVAL;
+	uint32_t app_tick = T;
 	start_udp_server();
 	if(sockfd < 0){
 		return -1;
 	}
 	init_addr_table();
+    scheduler = (scheduler_t *)malloc(sizeof(scheduler_t));
+    memset(scheduler, 0, sizeof(scheduler_t));
+    initScheduler(scheduler);
+    startScheduler(scheduler);
+    sch_event_t *def_event = (sch_event_t *)malloc(sizeof(sch_event_t));
+    memset(def_event, 0, sizeof(sch_event_t));
+    uint8_t name[32] = {0};
+    strcpy(name, "def_event");
+    initSchEvent(def_event, name, 1, 0, 0, send_beacon, NULL);
+    regSchDefEvent(scheduler, def_event);
 	while(1){
-        int cur_time = time(NULL);
-		if(check_timeslot_vaild(cur_time)){
-			if(tag_count){
-				int index = cur_time%120/INTERVAL;
-                if(index != 0){
-                    addr_table[index-1].rsp_flag = 0;
-                }else{
-                    addr_table[7].rsp_flag = 0;
-                }
-				if(addr_table[index].vaild && addr_table[index].rsp_flag == 0){
-					char *data = "i am req";
-					int data_len = strlen(data);
-					send_req(addr_table[index].addr, data, data_len);
-				}else{
-					send_beacon();
-				}
-			}else{
-				send_beacon();
-			}
-		}else{
-			//wait for receive
-		}
 		struct timeval tv;
 		fd_set readfds;
-		int i=0;
-		unsigned int n=0;
+		uint32_t i=0;
+		uint32_t n=0;
 		FD_ZERO(&readfds);
 		FD_SET(sockfd,&readfds);
-		tv.tv_sec=1;
-		tv.tv_usec=0;
+		tv.tv_sec=0;
+		tv.tv_usec=1000;
 		select(sockfd+1,&readfds,NULL,NULL,&tv);
 		if(FD_ISSET(sockfd,&readfds))
 		{
