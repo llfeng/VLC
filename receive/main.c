@@ -14,7 +14,8 @@
 #include "tag.h"
 
 
-#define INTERVAL 120
+#define PERIOD 120
+#define INTERVAL    15
 
 pthread_mutex_t port_mutex;
 
@@ -165,7 +166,8 @@ void send_beacon_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){
 
 
 void parse_req(tag_t *vitag, frame_t *frame){
-	memcpy(&vitag->next_req_time, frame->payload, sizeof(struct timeval));
+    vitag->next_req_time = frame->next_req_time + time(NULL);
+//	memcpy(&vitag->next_req_time, frame->payload, sizeof(struct timeval));
 }
 
 void send_req_rsp(tag_t *vitag, struct sockaddr_in *peer_addr){
@@ -185,7 +187,7 @@ void hash_interval(tag_t *vitag, struct sockaddr_in *peer_addr){
 
 void update_ip(tag_t *vitag, frame_t *frame){
 	vitag->status = LISTEN;
-    vitag->next_req_time = frame->next_req_time;
+    vitag->next_req_time = (frame->next_req_time>>5)*INTERVAL + (frame->next_req_time&0x1F) + time(NULL);
 	vitag->addr = frame->addr;
 }
 
@@ -229,6 +231,25 @@ int32_t handle_frame(tag_t *vitag, frame_t *frame, struct sockaddr_in *peer_addr
 	return ret;
 }
 
+
+int32_t belong_recv_interval(tag_t *vitag){
+    uint32_t cur_time = time(NULL);
+    if(cur_time < vitag->next_req_time+INTERVAL && cur_time >= vitag->next_req_time){
+        printf("cur:%d start:%d end:%d\n", cur_time, vitag->next_req_time, vitag->next_req_time+INTERVAL);
+        return 1;
+    }else if(cur_time > vitag->next_req_time+INTERVAL){
+        if(vitag->status == ACTIVE){
+            vitag->next_req_time += PERIOD;
+        }else{
+            vitag->status = ACTIVE;   
+            vitag->next_req_time += PERIOD;
+        }
+        return 0;
+    }else{
+        return 0;
+    }
+}
+
 void receive(tag_t *vitag){
 #define MAXLINE	1024
 	struct sockaddr_in peer_addr;
@@ -238,7 +259,7 @@ void receive(tag_t *vitag){
 	uint32_t n = recvfrom(vitag->sockfd, buf, MAXLINE, 0, (struct sockaddr*)&peer_addr, &addrlen);	
 	struct timeval recv_time;
 	memset(&recv_time, 0, sizeof(struct timeval));
-	if(n>0){
+	if(n>0 && belong_recv_interval(vitag)){
 		gettimeofday( &recv_time, NULL );
 		frame_t *frame = NULL;
         frame = decode_frame(buf, n, vitag);
@@ -312,6 +333,7 @@ void *listen_reader(void *para){
 
 
     vitag->status = ACTIVE;
+    vitag->next_req_time = time(NULL);
     uint32_t app_tick;
     while(1){
 		struct timeval tv;

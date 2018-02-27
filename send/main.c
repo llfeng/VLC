@@ -398,28 +398,6 @@ void receive(){
 	}
 }
 
-#if 0
-void send_thread(){
-	while(1){
-		uint32_t app_tick = time(NULL);
-		if(app_tick%10 < 9){
-			if(app_tick%10 == 0 && tag_count){
-				index = (app_tick%80)/10;
-				if(addr_table[index].vaild){
-					send_req(addr_table[index].addr, data, data_len);
-				}else{
-					send_beacon();
-				}
-			}else{
-				send_beacon();
-			}
-		}else{
-			//wait for receive
-		}
-		sleep(1);
-	}
-}
-#endif
 
 void init_addr_table(){
 	uint32_t i = 0;
@@ -437,7 +415,7 @@ int32_t main(){
 
 	uint32_t timer = 0;
 	uint32_t interval = INTERVAL;
-	uint32_t app_tick = T;
+//	uint32_t app_tick = T;
 	start_udp_server();
 	if(sockfd < 0){
 		return -1;
@@ -467,6 +445,6 @@ int32_t main(){
 		{
 			receive();
 		}
-		app_tick++;
+//		app_tick++;
 	}
 }
